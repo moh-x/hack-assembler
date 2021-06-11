@@ -9,8 +9,9 @@ import java.util.Scanner;
  * (fields and symbols). In addition, removes all white space and comments.
  * @author xodeeq
  * */
-public class Parser {
+public class Parser implements AutoCloseable {
 	
+	private final File asmFile;
 	protected static enum commandType { A_COMMAND, C_COMMAND, L_COMMAND };
 	private Scanner program;
 	private String currentCommand;
@@ -20,9 +21,15 @@ public class Parser {
 	 * @param fileIn
 	 * */
 	Parser (File fileIn) throws FileNotFoundException {
-		program = new Scanner(new File("prog.asm"));
+		asmFile = fileIn;
+		program = new Scanner( asmFile );
 	}
 	
+	Parser () throws FileNotFoundException {
+		asmFile = new File("prog.asm");
+		program = new Scanner( asmFile );
+	}
+
 	/**
 	 * Are there more commands in the input?
 	 * */
@@ -108,7 +115,7 @@ public class Parser {
 		return currentCommand.contains(";") ? currentCommand.split(";")[1] : null;
 	}
 	
-	void close () {
+	public void close () {
 		program.close();
 		return;
 	}

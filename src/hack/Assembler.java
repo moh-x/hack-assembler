@@ -6,53 +6,87 @@ import java.io.*;
 public class Assembler {
 	
 	public static void main ( String[] args ) {
-		Parser data;	// For reading input.
-		PrintWriter result;	// data output stream.
+		SymbolTable symbolTable;
+		final String fileName = "prog.asm";
+			// data output stream.
 		
 		// System.out.println(System.getProperty("user.dir"));
 		
-		try {
-			data = new Parser(new File("prog.asm"));
-		} catch (FileNotFoundException e) {
+		/* First Pass */
+		try ( Parser parser1 = new Parser(); ) {
+			int romAddress = 0;
+			symbolTable = new SymbolTable();
+			while ( parser1.hasMoreCommands() ) { // Read until end-of-file.
+				parser1.advance();
+				
+				// Record the current ROM address.
+				switch ( parser1.commandType() ) {
+				case A_COMMAND:
+				case C_COMMAND:
+					romAddress++;
+					continue;
+				case L_COMMAND:
+					symbolTable.addEntry(parser1.symbol(), romAddress);
+					continue;
+				}
+			}
+			
+		} catch ( FileNotFoundException e ) {
 			System.out.println("Can't find file prog.asm!");
 			return;
 		}
 		
-		try {
-			result = new PrintWriter("prog.hack");
-		} catch (FileNotFoundException e) {
-			System.out.println("Can’t open file prog.hack!");
+		
+		/* Second Pass */
+		try ( Parser parser2 = new Parser();
+			  // Prepare a corresponding .hack output file.
+			  PrintWriter output = new PrintWriter(fileName.replace(".asm", ".hack")); ) {
+			int ramAddress = 16;
+			String instruction;
+			while ( parser2.hasMoreCommands() ) { // Read until end-of-file.
+				parser2.advance();
+				
+				switch ( parser2.commandType() ) {
+				case A_COMMAND:
+					String symbol = parser2.symbol();
+					try {
+						instruction = Code.calc(Integer.parseInt(symbol));
+					} catch ( NumberFormatException e ) {
+						Integer address;
+						if ( symbolTable.contains(symbol) ) { // Variable's been initialized.
+							address = symbolTable.getAddress(symbol);
+						} else { // New variable.
+							address = ramAddress;
+							symbolTable.addEntry(symbol, address);
+							ramAddress++;
+						}
+						instruction = Code.calc(address);
+					}
+					break;
+				case C_COMMAND:	// Definitely a C_COMMAND.
+					Code binary = new Code();
+					String dest = binary.dest(parser2.dest());
+					String comp = binary.comp(parser2.comp());
+					String jump = binary.jump(parser2.jump());
+					String lineOut = "111" + comp + dest + jump;
+					instruction = lineOut;
+					break;
+				default:
+					continue;
+				}
+				
+				output.println(instruction);
+				
+			}
+			output.flush();
+		} catch ( FileNotFoundException e ) {
+			System.out.println("Can’t create file prog.hack!");
 			System.out.println("Error: " + e);
-			data.close(); // Close the input file.
 			return;
 		}
-		
-		while ( data.hasMoreCommands() ) { // Read until end-of-file.
-			data.advance();
-			Code binary = new Code();
-			String outLine;
-			
-			switch ( data.commandType() ) {
-			case A_COMMAND:
-			case L_COMMAND:
-				String symbol = data.symbol();
-				// Check if symbol is a number.
-				outLine = binary.calc(Integer.parseInt(symbol));
-				break;
-			default:	// Definitely a C_COMMAND.
-				String dest = binary.dest(data.dest());
-				String comp = binary.comp(data.comp());
-				String jump = binary.jump(data.jump());
-				outLine = "111" + comp + dest + jump;
-				break;
-			}
-			
-			result.println(outLine);
-		}
+
 		System.out.println("Done!");
-		
-		data.close();
-		result.close();
+
 	}
 
 }

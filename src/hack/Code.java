@@ -73,6 +73,17 @@ public class Code {
 		jumpTable = Collections.unmodifiableMap(jumpCodes);
 	}
 	
+	/***/
+	static String calc ( int decimal ) {
+		String binary = Integer.toBinaryString(decimal);
+		int zeros = 15 - binary.length();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < zeros; i++) {
+			sb.append(0);
+		}
+		return "0"+ sb.toString() + binary;
+	}
+	
 	/**
 	 * Returns the binary code of the dest mnemonic.
 	 * */
@@ -92,17 +103,6 @@ public class Code {
 	 * */
 	String jump ( String mnemonic ) {
 		return jumpTable.get(mnemonic);
-	}
-	
-	/***/
-	String calc ( int decimal ) {
-		String binary = Integer.toBinaryString(decimal);
-		int zeros = 15 - binary.length();
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < zeros; i++) {
-			sb.append(0);
-		}
-		return "0"+ sb.toString() + binary;
 	}
 
 }
